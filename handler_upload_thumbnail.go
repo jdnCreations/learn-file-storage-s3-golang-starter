@@ -1,10 +1,12 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
 	"github.com/google/uuid"
@@ -50,11 +52,11 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	mediaType := header.Header.Get("Content-Type")
 	fmt.Printf("Content-Type: %s\n", mediaType)
 
-	imageData, err := io.ReadAll(file)
-	if err != nil {
-		respondWithError(w, 422, "Error reading from file", err)
-		return
-	}
+	// imageData, err := io.ReadAll(file)
+	// if err != nil {
+	// 	respondWithError(w, 422, "Error reading from file", err)
+	// 	return
+	// }
 
 	video, err := cfg.db.GetVideo(videoID)
 	if err != nil {
@@ -62,14 +64,49 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	encodedData := base64.StdEncoding.EncodeToString(imageData)
-	dataURL := fmt.Sprintf("data:%s;base64,%v", mediaType, encodedData)
+	// save bytes to file at path /assets/<videoID>.<file_extension>
+	fileType, _, err := mime.ParseMediaType(mediaType)
+	if err != nil {
+		respondWithError(w, 422, "Couldn't get extension type from Content-Type", err)
+		return
+	}
+	if fileType != "image/jpeg" && fileType != "image/png" {
+		respondWithError(w, 422, "Incorrect file format", err)
+		return
+	}
+	ext, err := mime.ExtensionsByType(fileType)
+	if err != nil {
+		respondWithError(w, 422, "Couldn't get extension type from Content-Type", err)
+		return
+	}
+	if len(ext) == 0 {
+		respondWithError(w, 400, "Invalid file format", err)
+		return
+	}
 
-	video.ThumbnailURL = &dataURL
+	filename := videoIDString + ext[0] 
+	fp := filepath.Join(cfg.assetsRoot, filename)
+	newFile, err := os.Create(fp)
+	if err != nil {
+		respondWithError(w, 422, "Error creating new file", err)
+		return
+	}
+	defer newFile.Close()
+
+	_, err = io.Copy(newFile, file)
+	if err != nil {
+		respondWithError(w, 422, "Could not copy file", err)
+		return
+	}
+
+	thumbnailURL := fmt.Sprintf("http://localhost:%s/assets/%s", cfg.port, filename)
+
+	video.ThumbnailURL = &thumbnailURL
 
 	err = cfg.db.UpdateVideo(video)
 	if err != nil {
-		respondWithError(w, 422, "Could ont update video", err)
+		respondWithError(w, 422, "Could not update video", err)
+		return
 	}
 
 	respondWithJSON(w, http.StatusOK, video)
