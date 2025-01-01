@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"mime"
@@ -35,7 +37,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 
 	fmt.Println("uploading thumbnail for video", videoID, "by user", userID)
 
-	// TODO: implement the upload here
+	// implement the upload here
 	const maxMemory = 10 << 20
 	err = r.ParseMultipartForm(maxMemory)
 	if err != nil {
@@ -51,12 +53,6 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 
 	mediaType := header.Header.Get("Content-Type")
 	fmt.Printf("Content-Type: %s\n", mediaType)
-
-	// imageData, err := io.ReadAll(file)
-	// if err != nil {
-	// 	respondWithError(w, 422, "Error reading from file", err)
-	// 	return
-	// }
 
 	video, err := cfg.db.GetVideo(videoID)
 	if err != nil {
@@ -84,7 +80,13 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	filename := videoIDString + ext[0] 
+	slicey := make([]byte, 32)
+	_, err = rand.Read(slicey)
+	if err != nil {
+		respondWithError(w, 400, "Could not create a random thing", err)
+	}
+	base64String := base64.RawURLEncoding.EncodeToString(slicey)	
+	filename := base64String + ext[0] 
 	fp := filepath.Join(cfg.assetsRoot, filename)
 	newFile, err := os.Create(fp)
 	if err != nil {
