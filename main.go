@@ -91,7 +91,7 @@ func main() {
 		port:             port,
 	}
 
-	awsCfg, err := config.LoadDefaultConfig(context.Background())
+	awsCfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion("us-east-1"))
 	if err != nil {
 		log.Fatal("Could not load default AWS Config")
 	}
