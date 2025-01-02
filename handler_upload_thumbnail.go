@@ -67,7 +67,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if fileType != "image/jpeg" && fileType != "image/png" {
-		respondWithError(w, 422, "Incorrect file format", err)
+		respondWithError(w, 422, "Incorrect file format, must be .jpeg, or .png", err)
 		return
 	}
 	ext, err := mime.ExtensionsByType(fileType)
