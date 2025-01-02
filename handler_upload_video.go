@@ -75,20 +75,36 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	}
 	base64String := base64.RawURLEncoding.EncodeToString(slicey)	
 
+
 	tmpFile, err := os.CreateTemp("", "tubely-upload.mp4")
 	if err != nil {
 		respondWithError(w, 422, "Could not create temp file", err)
 		return
 	}
 
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
-
-	_, err = io.Copy(tmpFile, mpFile)
+  _, err = io.Copy(tmpFile, mpFile)
 	if err != nil {
 		respondWithError(w, 422, "Could not copy file", err)
 		return
 	}
+
+  newPath, err := processVideoForFastStart(tmpFile.Name())
+  if err != nil {
+    respondWithError(w, 422, "Could not process video for fast start", err)
+    return
+  }
+
+  processedFile, err := os.Open(newPath)
+  if err != nil {
+    respondWithError(w, 422, "Could not open file", err)
+    return
+  }
+  
+  defer processedFile.Close()
+  defer os.Remove(processedFile.Name())
+
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
 
 	ratio, err := getVideoAspectRatio(tmpFile.Name())
 	if err != nil {
@@ -106,7 +122,6 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
     prefix = "other/"
   }
 
-
 	key := prefix + base64String + ".mp4"
 
 	// reset pointer
@@ -114,7 +129,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	_, err = cfg.s3Client.PutObject(context.Background(), &s3.PutObjectInput{
 		Bucket: &cfg.s3Bucket,
 		Key: &key,
-		Body: tmpFile,
+		Body: processedFile,
 		ContentType: &fileType,
 	})
 

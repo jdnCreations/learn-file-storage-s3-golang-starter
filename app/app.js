@@ -230,21 +230,6 @@ function viewVideo(video) {
     thumbnailImg.src = video.thumbnail_url;
   }
 
-  const downloadButton = document.getElementById('download-button');
-  if (downloadButton) {
-    if (!video.video_url) {
-      downloadButton.style.display = 'none';
-    } else {
-      downloadButton.style.display = 'block';
-      downloadButton.onclick = () => {
-        const link = document.createElement('a');
-        link.href = video.video_url;
-        link.download = `${video.title}.mp4`;
-        link.click();
-      };
-    }
-  }
-
   const videoPlayer = document.getElementById('video-player');
   if (videoPlayer) {
     if (!video.video_url) {

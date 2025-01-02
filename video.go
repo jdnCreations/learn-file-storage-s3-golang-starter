@@ -50,3 +50,15 @@ func getVideoAspectRatio(filePath string) (string, error) {
   fmt.Println("Debug - Detected as other")
 	return "other", nil 
 }
+
+func processVideoForFastStart(filePath string) (string, error) {
+  updatedPath := filePath + ".processing"
+  cmd := exec.Command("ffmpeg", "-i", filePath, "-c", "copy", "-movflags", "faststart", "-f", "mp4", updatedPath)
+  var b bytes.Buffer
+  cmd.Stdout = &b
+	err := cmd.Run()
+  if err != nil {
+    return "", err
+  }
+  return updatedPath, nil
+}
