@@ -137,8 +137,8 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, 422, "Failed to upload object to S3", err)
 		return
 	}
-	
-	videoURL := fmt.Sprintf("%s,%s", cfg.s3Bucket, key)
+
+	videoURL := fmt.Sprintf("%s/%s", cfg.s3CfDistribution, key)
 	videoData.VideoURL = &videoURL 
 
 	err = cfg.db.UpdateVideo(videoData)
@@ -147,11 +147,6 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-  video, err := cfg.dbVideoToSignedVideo(videoData)
-  if err != nil {
-    respondWithError(w, 422, "Could not convert to signed video", err)
-    return
-  }
 
-	respondWithJSON(w, http.StatusOK, video)
+	respondWithJSON(w, http.StatusOK, videoData)
 }
